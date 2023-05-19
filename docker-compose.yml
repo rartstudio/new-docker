@@ -4,6 +4,10 @@ networks:
   backend:
     driver: ${NETWORKS_DRIVER}
 volumes:
+  pg_0_data:
+    driver: ${VOLUMES_DRIVER}
+  pg_1_data:
+    driver: ${VOLUMES_DRIVER}
   postgres:
     driver: ${VOLUMES_DRIVER}
   redis:
@@ -12,24 +16,45 @@ volumes:
 
 services:
 ### PostgreSQL ###########################################
-    postgres:
-      build:
-        context: ./postgres
-        args:
-          - POSTGRES_VERSION=${POSTGRES_VERSION}
-      volumes:
-        - ${DATA_PATH_HOST}/postgres:/var/lib/postgresql/data
-        - ${POSTGRES_ENTRYPOINT_INITDB}:/docker-entrypoint-initdb.d
+    pg-0:
+      image: bitnami/postgresql-repmgr:15
       ports:
-        - "${POSTGRES_PORT}:5432"
+        - "${PG_0_PORT}:5432"
+      volumes:
+        - ${DATA_PATH_HOST}/pg_0_data:/bitnami/postgresql
       environment:
-        - POSTGRES_DB=${POSTGRES_DB}
-        - POSTGRES_USER=${POSTGRES_USER}
-        - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      networks:
-        - backend
+        - POSTGRESQL_POSTGRES_PASSWORD=${PG_0_ADMIN_PASSWORD}
+        - POSTGRESQL_USERNAME=${PG_0_USERNAME}
+        - POSTGRESQL_PASSWORD=${PG_0_PASSWORD}
+        - POSTGRESQL_DATABASE=${PG_0_DATABASE}
+        - REPMGR_PASSWORD=${REPMGR_PASSWORD}
+        - REPMGR_PRIMARY_HOST=${REPMGR_PRIMARY_HOST}
+        - REPMGR_PRIMARY_PORT=${PG_0_PORT}
+        - REPMGR_PARTNER_NODES=${REPMGR_PARTNER_NODES}
+        - REPMGR_NODE_NAME=pg-0
+        - REPMGR_NODE_NETWORK_NAME=pg-0
+        - REPMGR_PORT_NUMBER=5432
 
-  ### Redis ################################################
+    pg-1:
+      image: bitnami/postgresql-repmgr:15
+      ports:
+        - "${PG_1_PORT}:5432"
+      volumes:
+        - ${DATA_PATH_HOST}/pg_1_data:/bitnami/postgresql
+      environment:
+        - POSTGRESQL_POSTGRES_PASSWORD=${PG_1_ADMIN_PASSWORD}
+        - POSTGRESQL_USERNAME=${PG_1_USERNAME}
+        - POSTGRESQL_PASSWORD=${PG_1_PASSWORD}
+        - POSTGRESQL_DATABASE=${PG_1_DATABASE}
+        - REPMGR_PASSWORD=${REPMGR_PASSWORD}
+        - REPMGR_PRIMARY_HOST=${REPMGR_PRIMARY_HOST}
+        - REPMGR_PRIMARY_PORT=${PG_0_PORT}
+        - REPMGR_PARTNER_NODES=${REPMGR_PARTNER_NODES}
+        - REPMGR_NODE_NAME=pg-1
+        - REPMGR_NODE_NETWORK_NAME=pg-1
+        - REPMGR_PORT_NUMBER=5432
+      
+### Redis ################################################
     redis:
       build: ./redis
       volumes:
